@@ -7,5 +7,4 @@ return
 end
 vim.g.loaded_mana = true
 
-local mana = require('mana')
-mana.run()
+require('mana')
