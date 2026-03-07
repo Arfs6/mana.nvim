@@ -29,21 +29,22 @@ vim.on_key(
 
 vim.api.nvim_create_autocmd('CursorMoved', {
 	callback = function()
+		log.info('Cursor moved.')
 		local pos = vim.fn.getcurpos()
 		local cursorPos = { pos[2], pos[3] }
+		local line = api.nvim_get_current_line()
+		local text = ''
 		if m.cursorPos and cursorPos[1] == m.cursorPos[1] then
-			log.info('Cursor moved on the same line')
-			if cursorPos[2] == m.cursorPos[2] + 1 or cursorPos[2] == m.cursorPos[2] -1 then
-				local line = api.nvim_get_current_line()
-				espeak_ng.speak(string.sub(line, cursorPos[2], cursorPos[2]))
+			if m.cursorPos[2] > cursorPos[2] then
+				text = string.sub(line, cursorPos[2], m.cursorPos[2])
 			else
-			espeak_ng.speak(fn.expand('<cword>'))
+				text = string.sub(line, m.cursorPos[2], cursorPos[2])
 			end
 		else
-			log.info('Cursor moved to a different line')
-			espeak_ng.speak(api.nvim_get_current_line())
+			text = line
 		end
-		m.cursorPos = { pos[2], pos[1] }
+		espeak_ng.speak(text)
+		m.cursorPos = cursorPos
 	end
 })
 
