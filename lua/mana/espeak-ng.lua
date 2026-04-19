@@ -122,12 +122,6 @@ typedef struct {
 } espeak_EVENT;
 ]]
 ffi.cdef [[
-typedef int (t_espeak_callback)(short*, int, espeak_EVENT*)
-]]
-ffi.cdef [[
-void espeak_SetSynthCallback(t_espeak_callback* SynthCallback)
-]]
-ffi.cdef [[
 espeak_ERROR espeak_Char(wchar_t character)
 ]]
 
@@ -151,17 +145,6 @@ libespeak_ng.espeak_SetParameter(
 	ffi.new('espeak_PARAMETER', 'espeakPUNCTUATION'),
 	ffi.new('espeak_PUNCT_TYPE', 'espeakPUNCT_ALL'),
 	0
-)
-libespeak_ng.espeak_SetSynthCallback(
-	ffi.cast('t_espeak_callback *', function(wav, numsamples, events)
-		if wav then
-			m.speaking = true
-			return 1
-		end
-
-		m.speaking = false
-		return 0
-	end)
 )
 
 local identifier = ffi.new('unsigned int*')
@@ -191,9 +174,7 @@ m.speak = function(text, opts)
 end
 
 m.stop = function()
-	if m.speaking then
-		libespeak_ng.espeak_Cancel()
-	end
+	libespeak_ng.espeak_Cancel()
 end
 
 return m

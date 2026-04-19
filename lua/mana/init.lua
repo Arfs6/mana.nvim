@@ -18,9 +18,7 @@ local espeak_ng = require('mana.espeak-ng')
 vim.on_key(
 	function(key, typed)
 		local text = keys[vim.fn.keytrans(typed)] or vim.fn.keytrans(typed)
-		if espeak_ng.speaking then
-			espeak_ng.stop()
-		end
+		espeak_ng.stop()
 		espeak_ng.speak(text)
 	end,
 	0,
