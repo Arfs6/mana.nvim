@@ -131,12 +131,12 @@ ffi.cdef [[
 espeak_ERROR espeak_Char(wchar_t character)
 ]]
 
-local lib_espeak_ng_path = 'libespeak-ng.dll'
+local lib_espeak_ng_path = 'libespeak-ng.so'
 
-if vim.env['os'] == 'Windows_NT' then
+if jit.os == 'Windows' then
 	lib_espeak_ng_path =[[C:\Program Files\eSpeak NG\libespeak-ng.dll]]
-elseif vim.env['OS_TYPE'] == 'linux-gnu' then
-	lib_espeak_ng_path = '/home/arfs6/.local/lib/libespeak-ng.so'
+elseif jit.os == 'Linux' then
+	lib_espeak_ng_path = '/usr/lib/x86_64-linux-gnu/libespeak-ng.so.1'
 else
 	lib_espeak_ng_path = 'espeak-ng.so'
 end
