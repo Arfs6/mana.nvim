@@ -35,8 +35,14 @@ vim.api.nvim_create_autocmd('CursorMoved', {
 		if m.cursorPos and cursorPos[1] == m.cursorPos[1] then
 			if m.cursorPos[2] > cursorPos[2] then
 				text = string.sub(line, cursorPos[2], m.cursorPos[2])
+				if #text == 2 then
+					text = string.sub(text, 1, 1)
+				end
 			else
 				text = string.sub(line, m.cursorPos[2], cursorPos[2])
+				if #text == 2 then
+					text = string.sub(text, 2, 2)
+				end
 			end
 		else
 			text = line
