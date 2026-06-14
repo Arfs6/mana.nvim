@@ -21,39 +21,51 @@ m.on_key = function(key, typed)
 end
 
 m.events = {
-	CursorMoved = {
-		callback = function()
-			log.info('Cursor moved.')
-			local pos = vim.fn.getcurpos()
-			local cursorPos = { pos[2], pos[3] }
-			local line = api.nvim_get_current_line()
-			local text = ''
-			if m.cursorPos and cursorPos[1] == m.cursorPos[1] then
-				if m.cursorPos[2] > cursorPos[2] then
-					text = string.sub(line, cursorPos[2], m.cursorPos[2])
-					if #text == 2 then
-						text = string.sub(text, 1, 1)
+	{
+		events = {'CursorMoved', 'VimEnter'},
+		opts = {
+			callback = function(opts)
+				log.info(opts.event)
+				log.info('Cursor moved.')
+				local pos = vim.fn.getcurpos()
+				local cursorPos = { pos[2], pos[3] }
+				local line = api.nvim_get_current_line()
+				local text = ''
+				if m.cursorPos and cursorPos[1] == m.cursorPos[1] then
+					if m.cursorPos[2] > cursorPos[2] then
+						text = string.sub(line, cursorPos[2], m.cursorPos[2])
+						if #text == 2 then
+							text = string.sub(text, 1, 1)
+						end
+					else
+						text = string.sub(line, m.cursorPos[2], cursorPos[2])
+						if #text == 2 then
+							text = string.sub(text, 2, 2)
+						end
 					end
 				else
-					text = string.sub(line, m.cursorPos[2], cursorPos[2])
-					if #text == 2 then
-						text = string.sub(text, 2, 2)
-					end
+					text = line
 				end
-			else
-				text = line
+				tts.speak(text)
+				m.cursorPos = cursorPos
 			end
-			tts.speak(text)
-			m.cursorPos = cursorPos
-		end
+		}
+	},
+	{
+		events = {'BufLeave'},
+		opts = {
+			callback = function()
+				m.cursorPos = nil
+			end
+		}
 	}
 }
 
 m.init = function()
 	vim.on_key(m.on_key, 0, {})
 
-	for event, opts in pairs(m.events) do
-		api.nvim_create_autocmd(event, opts)
+	for _, event in pairs(m.events) do
+		api.nvim_create_autocmd(event.events, event.opts)
 	end
 end
 
