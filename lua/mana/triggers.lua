@@ -25,7 +25,6 @@ m.events = {
 		events = {'CursorMoved', 'VimEnter'},
 		opts = {
 			callback = function(opts)
-				log.info(opts.event)
 				log.info('Cursor moved.')
 				local pos = vim.fn.getcurpos()
 				local cursorPos = { pos[2], pos[3] }
@@ -56,6 +55,40 @@ m.events = {
 		opts = {
 			callback = function()
 				m.cursorPos = nil
+			end
+		}
+	},
+	{
+		events = {'CursorMovedC'},
+		opts = {
+			callback = function()
+				local cmdPos = vim.fn.getcmdpos()
+				local line = vim.fn.getcmdtype() .. vim.fn.getcmdline()
+				local text
+				if m.cmdPos == nil then
+				m.cmdPos = 1
+				end
+				if m.cmdPos > cmdPos then
+					text = string.sub(line, cmdPos, m.cmdPos)
+					if #text == 2 then
+						text = string.sub(text, 1, 1)
+					end
+				else
+					text = string.sub(line, m.cmdPos, cmdPos)
+					if #text == 2 then
+						text = string.sub(text, 2, 2)
+					end
+				end
+				tts.speak(text)
+				m.cmdPos = cmdPos
+			end
+		}
+	},
+	{
+		events = {'CmdlineLeave'},
+		opts = {
+			callback = function()
+				m.cmdPos = nil
 			end
 		}
 	}
