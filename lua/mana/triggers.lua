@@ -66,7 +66,7 @@ m.events = {
 				local line = vim.fn.getcmdtype() .. vim.fn.getcmdline()
 				local text
 				if m.cmdPos == nil then
-				m.cmdPos = 1
+					m.cmdPos = 1
 				end
 				if m.cmdPos > cmdPos then
 					text = string.sub(line, cmdPos, m.cmdPos)
@@ -89,6 +89,43 @@ m.events = {
 		opts = {
 			callback = function()
 				m.cmdPos = nil
+			end
+		}
+	},
+	{
+		events = 'CursorMovedI',
+		opts = {
+			callback = function()
+				log.debug('Cursor moved in insert mode')
+				local pos = vim.fn.getcurpos()
+				local insertCurPos = { pos[2], pos[3] }
+				local line = api.nvim_get_current_line()
+				local text = ''
+				if m.insertCurPos and insertCurPos[1] == m.insertCurPos[1] then
+					if m.insertCurPos[2] > insertCurPos[2] then
+						text = string.sub(line, insertCurPos[2], m.insertCurPos[2])
+						if #text == 2 then
+							text = string.sub(text, 1, 1)
+						end
+					else
+						text = string.sub(line, m.insertCurPos[2], insertCurPos[2])
+						if #text == 2 then
+							text = string.sub(text, 2, 2)
+						end
+					end
+				else
+					text = line
+				end
+				tts.speak(text)
+				m.insertCurPos = insertCurPos
+			end
+		}
+	},
+	{
+		events = 'InsertLeave',
+		opts = {
+			callback = function()
+				m.inseertCurPos = nil
 			end
 		}
 	}
