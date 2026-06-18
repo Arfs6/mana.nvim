@@ -9,6 +9,7 @@ local api = vim.api
 local log = require('plenary.log').new({
 	plugin = 'mana',
 	level = 'debug',
+	use_console = false,
 })
 
 local keys = require('mana.keys')
@@ -137,6 +138,19 @@ m.init = function()
 	for _, event in pairs(m.events) do
 		api.nvim_create_autocmd(event.events, event.opts)
 	end
+
+	local ns = vim.api.nvim_create_namespace('mana.nvim')
+
+	vim.ui_attach(ns, {ext_messages=true}, function(event, ...)
+		if event == 'msg_show' then
+			local kind, content, replace_last, history, append, id, trigger = ...
+			local text = ''
+			for _, chunk in ipairs(content) do
+				text = text .. chunk[2]
+			end
+			tts.speak(text)
+		end
+	end)
 end
 
 return m
