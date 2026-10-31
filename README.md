@@ -54,7 +54,7 @@ require('mana').setup({
 - `init` is called once when Mana is set up.
 - `speak(text)` receives the text to speak.
 - `stop()` cancels current speech.
-- `uninit()` releases the engine when it is replaced or Mana is unloaded.
+- `uninit()` releases resources held by the engine.
 
 ### Using arfs6/espeak-ng.lua
 
