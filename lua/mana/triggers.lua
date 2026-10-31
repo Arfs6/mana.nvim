@@ -15,6 +15,74 @@ local log = require('plenary.log').new({
 local keys = require('mana.keys')
 local tts = require('mana.tts')
 
+local function clamp(value, min, max)
+	if value < min then
+		return min
+	end
+	if value > max then
+		return max
+	end
+	return value
+end
+
+local function utf_end(line, col)
+	if #line == 0 then
+		return 0
+	end
+
+	col = clamp(col, 1, #line)
+	local ok, offset = pcall(vim.str_utf_end, line, col)
+	if not ok or type(offset) ~= 'number' or offset < 0 then
+		return 0
+	end
+	return offset
+end
+
+-- Return the byte range to speak for a cursor move. All inputs are clamped
+-- to the line so a stale or out-of-range cursor position cannot read outside
+-- of the buffer line.
+m.speechRange = function(prev, cur, line)
+	line = line or ''
+
+	if #line == 0 then
+		return nil
+	end
+
+	if not prev or prev[1] ~= cur[1] then
+		return { 1, #line }
+	end
+
+	local prev_col = clamp(prev[2] or 1, 1, #line)
+	local cur_col = clamp(cur[2] or 1, 1, #line)
+
+	if cur_col > prev_col then
+		local text = line:sub(prev_col, cur_col)
+		local end_col = clamp(cur_col + utf_end(line, cur_col), 1, #line)
+		if vim.fn.strchars(text) == 2 then
+			return { cur_col, end_col }
+		end
+		return { prev_col, end_col }
+	elseif prev_col > cur_col then
+		local text = line:sub(cur_col, prev_col)
+		local end_col = clamp(cur_col + utf_end(line, cur_col), 1, #line)
+		if vim.fn.strchars(text) == 2 then
+			return { cur_col, end_col }
+		end
+		return { cur_col, clamp(prev_col + utf_end(line, prev_col), 1, #line) }
+	end
+
+	return { cur_col, clamp(cur_col + utf_end(line, cur_col), 1, #line) }
+end
+
+local function speak_range(prev, cur, line)
+	local range = m.speechRange(prev, cur, line)
+	if range then
+		tts.speak(line:sub(range[1], range[2]))
+	else
+		tts.speak('')
+	end
+end
+
 m.on_key = function(key, typed)
 	local text = keys[vim.fn.keytrans(typed)] or vim.fn.keytrans(typed)
 	tts.stop()
@@ -23,75 +91,44 @@ end
 
 m.events = {
 	{
-		events = {'CursorMoved', 'VimEnter'},
+		events = { 'CursorMoved', 'VimEnter' },
 		opts = {
 			callback = function(opts)
 				log.info('Cursor moved.')
 				local pos = vim.fn.getcurpos()
 				local cursorPos = { pos[2], pos[3] }
 				local line = api.nvim_get_current_line()
-				local text = ''
-				if m.cursorPos and cursorPos[1] == m.cursorPos[1] then
-					if m.cursorPos[2] > cursorPos[2] then
-						text = string.sub(line, cursorPos[2], m.cursorPos[2])
-						if #text == 2 then
-							text = string.sub(text, 1, 1)
-						end
-					else
-						text = string.sub(line, m.cursorPos[2], cursorPos[2])
-						if #text == 2 then
-							text = string.sub(text, 2, 2)
-						end
-					end
-				else
-					text = line
-				end
-				tts.speak(text)
+				speak_range(m.cursorPos, cursorPos, line)
 				m.cursorPos = cursorPos
-			end
-		}
+			end,
+		},
 	},
 	{
-		events = {'BufLeave'},
+		events = { 'BufLeave' },
 		opts = {
 			callback = function()
 				m.cursorPos = nil
-			end
-		}
+			end,
+		},
 	},
 	{
-		events = {'CursorMovedC'},
+		events = { 'CursorMovedC' },
 		opts = {
 			callback = function()
-				local cmdPos = vim.fn.getcmdpos()
+				local cmdPos = { 1, vim.fn.getcmdpos() }
 				local line = vim.fn.getcmdtype() .. vim.fn.getcmdline()
-				local text
-				if m.cmdPos == nil then
-					m.cmdPos = 1
-				end
-				if m.cmdPos > cmdPos then
-					text = string.sub(line, cmdPos, m.cmdPos)
-					if #text == 2 then
-						text = string.sub(text, 1, 1)
-					end
-				else
-					text = string.sub(line, m.cmdPos, cmdPos)
-					if #text == 2 then
-						text = string.sub(text, 2, 2)
-					end
-				end
-				tts.speak(text)
+				speak_range(m.cmdPos, cmdPos, line)
 				m.cmdPos = cmdPos
-			end
-		}
+			end,
+		},
 	},
 	{
-		events = {'CmdlineLeave'},
+		events = { 'CmdlineLeave' },
 		opts = {
 			callback = function()
 				m.cmdPos = nil
-			end
-		}
+			end,
+		},
 	},
 	{
 		events = 'CursorMovedI',
@@ -101,38 +138,27 @@ m.events = {
 				local pos = vim.fn.getcurpos()
 				local insertCurPos = { pos[2], pos[3] }
 				local line = api.nvim_get_current_line()
-				local text = ''
-				if m.insertCurPos and insertCurPos[1] == m.insertCurPos[1] then
-					if m.insertCurPos[2] > insertCurPos[2] then
-						text = string.sub(line, insertCurPos[2], m.insertCurPos[2])
-						if #text == 2 then
-							text = string.sub(text, 1, 1)
-						end
-					else
-						text = string.sub(line, m.insertCurPos[2], insertCurPos[2])
-						if #text == 2 then
-							text = string.sub(text, 2, 2)
-						end
-					end
-				else
-					text = line
-				end
-				tts.speak(text)
+				speak_range(m.insertCurPos, insertCurPos, line)
 				m.insertCurPos = insertCurPos
-			end
-		}
+			end,
+		},
 	},
 	{
 		events = 'InsertLeave',
 		opts = {
 			callback = function()
-				m.inseertCurPos = nil
-			end
-		}
-	}
+				m.insertCurPos = nil
+			end,
+		},
+	},
 }
 
 m.init = function()
+	if m.initialized then
+		return
+	end
+	m.initialized = true
+
 	vim.on_key(m.on_key, 0, {})
 
 	for _, event in pairs(m.events) do
@@ -141,14 +167,21 @@ m.init = function()
 
 	local ns = vim.api.nvim_create_namespace('mana.nvim')
 
-	vim.ui_attach(ns, {ext_messages=true}, function(event, ...)
-		if event == 'msg_show' then
-			local kind, content, replace_last, history, append, id, trigger = ...
-			local text = ''
-			for _, chunk in ipairs(content) do
-				text = text .. chunk[2]
+	vim.ui_attach(ns, { ext_messages = true }, function(event, ...)
+		if event ~= 'msg_show' then
+			return
+		end
+
+		local _, content = ...
+		local parts = {}
+		for _, chunk in ipairs(content or {}) do
+			if type(chunk) == 'table' and chunk[2] then
+				parts[#parts + 1] = tostring(chunk[2])
 			end
-			tts.speak(text)
+		end
+
+		if #parts > 0 then
+			tts.speak(table.concat(parts))
 		end
 	end)
 end
