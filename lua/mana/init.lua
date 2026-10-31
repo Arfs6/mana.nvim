@@ -1,15 +1,24 @@
 --[[
 --Mana begins here.
+--Call require('mana').setup() from your configuration.
 --]]
+
 local m = {}
 
-local log = require('plenary.log').new({
-	plugin = 'mana',
-	level = 'debug',
-	use_console = false,
-})
+local started = false
 
-local triggers = require('mana.triggers')
-triggers.init()
+m.setup = function(config)
+	local tts = require('mana.tts')
+	tts.setup(config)
+
+	if not started then
+		require('mana.triggers').init()
+		started = true
+	end
+
+	return m
+end
+
+m.init = m.setup
 
 return m
